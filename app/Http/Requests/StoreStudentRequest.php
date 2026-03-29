@@ -24,13 +24,15 @@ class StoreStudentRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255',
-            'phone' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:students,email',
+            'phone' => 'required|string|max:255|unique:students,phone',
             'address' => 'required|string|max:255',
-            'age' => 'required|date',
+            'age' => 'required|integer|min:1|max:100',
             'gender' => 'required|string|max:255',
-            'school_id' => 'required',
-            Rule::exists('schools', 'id')->whereNull('deleted_at'),
+            'school_id' => [
+                'required',
+                Rule::exists('schools', 'id')->whereNull('deleted_at')
+            ],
         ];
     }
 }

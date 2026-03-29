@@ -2,8 +2,9 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\School;
+use App\Exceptions\RecordNotFoundException;
 use App\Interfaces\SchoolRepositoryInterface;
+use App\Models\School;
 
 class SchoolRepository implements SchoolRepositoryInterface
 {
@@ -14,7 +15,13 @@ class SchoolRepository implements SchoolRepositoryInterface
 
     public function find($id)
     {
-        return School::findOrFail($id);
+        $school = School::find($id);
+
+        if (!$school) {
+            throw new RecordNotFoundException('School not found');
+        }
+
+        return $school;
     }
 
     public function create(array $data)
@@ -24,13 +31,22 @@ class SchoolRepository implements SchoolRepositoryInterface
 
     public function update($id, array $data)
     {
-        $school = School::findOrFail($id);
+        $school = School::find($id);
+        if (!$school) {
+            throw new RecordNotFoundException('School not found');
+        }
         $school->update($data);
         return $school;
     }
 
     public function delete($id)
     {
-        return School::destroy($id);
+        $student = School::find($id);
+
+        if (!$student) {
+            throw new RecordNotFoundException('School not found');
+        }
+
+        $student->delete();
     }
 }

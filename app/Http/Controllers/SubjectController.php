@@ -2,65 +2,59 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoresubjectRequest;
-use App\Http\Requests\UpdatesubjectRequest;
-use App\Models\subject;
+use App\Http\Requests\StoreSubjectRequest;
+use App\Http\Requests\UpdateSubjectRequest;
+use App\Http\Resources\SubjectResource;
+use App\Services\SubjectService;
 
 class SubjectController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    public function __construct(
+        protected SubjectService $service
+    ) {}
+
     public function index()
     {
-        //
+        return SubjectResource::collection(
+            $this->service->all()
+        );
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function show($id)
     {
-        //
+        return new SubjectResource(
+            $this->service->find($id)
+        );
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoresubjectRequest $request)
+    public function store(StoreSubjectRequest $request)
     {
-        //
+        $subject = $this->service->create(
+            $request->validated()
+        );
+
+        return (new SubjectResource($subject))
+            ->response()
+            ->setStatusCode(201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(subject $subject)
+    public function update(UpdateSubjectRequest $request, $id)
     {
-        //
+        $subject = $this->service->update(
+            $id,
+            $request->validated()
+        );
+
+        return new SubjectResource($subject);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(subject $subject)
+    public function destroy($id)
     {
-        //
-    }
+        $this->service->delete($id);
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdatesubjectRequest $request, subject $subject)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(subject $subject)
-    {
-        //
+        return response()->json([
+            'success' => true,
+            'message' => 'Subject deleted successfully'
+        ]);
     }
 }

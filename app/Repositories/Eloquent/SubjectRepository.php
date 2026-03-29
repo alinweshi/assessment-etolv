@@ -2,8 +2,9 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\Subject;
+use App\Exceptions\RecordNotFoundException;
 use App\Interfaces\SubjectRepositoryInterface;
+use App\Models\Subject;
 
 class SubjectRepository implements SubjectRepositoryInterface
 {
@@ -14,7 +15,13 @@ class SubjectRepository implements SubjectRepositoryInterface
 
     public function find($id)
     {
-        return Subject::findOrFail($id);
+        $subject = Subject::find($id);
+
+        if (!$subject) {
+            throw new RecordNotFoundException('Subject not found');
+        }
+
+        return $subject;
     }
 
     public function create(array $data)
@@ -24,13 +31,22 @@ class SubjectRepository implements SubjectRepositoryInterface
 
     public function update($id, array $data)
     {
-        $subject = Subject::findOrFail($id);
+        $subject = Subject::find($id);
+        if (!$subject) {
+            throw new RecordNotFoundException('Subject not found');
+        }
         $subject->update($data);
         return $subject;
     }
 
     public function delete($id)
     {
-        return Subject::destroy($id);
+        $subject = Subject::find($id);
+
+        if (!$subject) {
+            throw new RecordNotFoundException('Subject not found');
+        }
+
+        $subject->delete();
     }
 }

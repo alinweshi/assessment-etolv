@@ -16,7 +16,7 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('subjects', SubjectController::class);
     Route::apiResource('students', StudentController::class);
 
-    Route::post('students/{id}/enroll',   [StudentController::class, 'enroll']);
-    Route::post('students/{id}/subjects', [StudentController::class, 'addSubject']);
+    Route::post('students/{id}/enroll/{schoolId}',   [StudentController::class, 'enroll']);
+    Route::post('students/{id}/subjects', [StudentController::class, 'registerSubject']);
     Route::get('students-report',         [StudentController::class, 'report']);
 });

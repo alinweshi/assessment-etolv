@@ -2,8 +2,11 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\Student;
+use App\Exceptions\RecordNotFoundException;
 use App\Interfaces\StudentRepositoryInterface;
+use App\Models\School;
+use App\Models\Student;
+use App\Models\Subject;
 
 class StudentRepository implements StudentRepositoryInterface
 {
@@ -14,7 +17,13 @@ class StudentRepository implements StudentRepositoryInterface
 
     public function find($id)
     {
-        return Student::with(['school', 'subjects'])->findOrFail($id);
+        $student = Student::find($id);
+
+        if (!$student) {
+            throw new RecordNotFoundException();
+        }
+
+        return $student->load(['school', 'subjects']);
     }
 
     public function create(array $data)
@@ -24,29 +33,54 @@ class StudentRepository implements StudentRepositoryInterface
 
     public function update($id, array $data)
     {
-        $student = Student::findOrFail($id);
+        $student = Student::find($id);
+        if (!$student) {
+            throw new RecordNotFoundException();
+        }
         $student->update($data);
         return $student;
     }
 
     public function delete($id)
     {
-        return Student::destroy($id);
+        $student = Student::find($id);
+
+        if (!$student) {
+            throw new RecordNotFoundException('Student not found');
+        }
+
+        $student->delete();
     }
+
+
 
     public function enrollInSchool($studentId, $schoolId)
     {
-        $student = Student::findOrFail($studentId);
-        $student->school()->associate($schoolId);
+        $student = Student::find($studentId);
+        if (!$student) {
+            throw new RecordNotFoundException('Student not found');
+        }
+
+        if (!School::where('id', $schoolId)->exists()) {
+            throw new RecordNotFoundException('School not found');
+        }
+
+        $school = School::find($schoolId);
+        $student->school()->associate($school);
         $student->save();
-        return $student->load('school');
+
+        return $student->load(['school', 'subjects']);
     }
 
-    public function registerSubject($studentId, $subjectId)
+    public function registerSubject($studentId, array $subjectIds = [])
     {
-        $student = Student::findOrFail($studentId);
-        $student->subjects()->syncWithoutDetaching([$subjectId]);
-        return $student->load('subjects');
+        $student = Student::find($studentId);
+        if (!$student) {
+            throw new RecordNotFoundException('Student not found');
+        }
+
+        $student->subjects()->syncWithoutDetaching($subjectIds);
+        return $student->load('subjects', 'school');
     }
 
     public function report()

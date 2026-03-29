@@ -18,9 +18,10 @@ return new class extends Migration
                 $table->string('email')->unique();
                 $table->string('phone')->unique();
                 $table->string('address');
-                $table->date('age');
+                $table->tinyInteger('age');
                 $table->string('gender');
                 $table->foreignId('school_id')->nullable()->constrained()->nullOnDelete();
+                $table->softDeletes();
                 $table->timestamps();
             });
         }

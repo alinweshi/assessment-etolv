@@ -2,65 +2,59 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreschoolRequest;
-use App\Http\Requests\UpdateschoolRequest;
-use App\Models\school;
+use App\Http\Requests\StoreSchoolRequest;
+use App\Http\Requests\UpdateSchoolRequest;
+use App\Http\Resources\SchoolResource;
+use App\Services\SchoolService;
 
 class SchoolController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    public function __construct(
+        protected SchoolService $service
+    ) {}
+
     public function index()
     {
-        //
+        return SchoolResource::collection(
+            $this->service->all()
+        );
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function show($id)
     {
-        //
+        return new SchoolResource(
+            $this->service->find($id)
+        );
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreschoolRequest $request)
+    public function store(StoreSchoolRequest $request)
     {
-        //
+        $school = $this->service->create(
+            $request->validated()
+        );
+
+        return (new SchoolResource($school))
+            ->response()
+            ->setStatusCode(201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(school $school)
+    public function update(UpdateSchoolRequest $request, $id)
     {
-        //
+        $school = $this->service->update(
+            $id,
+            $request->validated()
+        );
+
+        return new SchoolResource($school);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(school $school)
+    public function destroy($id)
     {
-        //
-    }
+        $this->service->delete($id);
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateschoolRequest $request, school $school)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(school $school)
-    {
-        //
+        return response()->json([
+            'success' => true,
+            'message' => 'School deleted successfully'
+        ]);
     }
 }

@@ -2,65 +2,102 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StorestudentRequest;
-use App\Http\Requests\UpdatestudentRequest;
-use App\Models\student;
+use App\Http\Requests\RegisterSubjectRequest;
+use App\Http\Requests\StoreStudentRequest;
+use App\Http\Resources\ReportResource;
+use App\Http\Resources\StudentResource;
+use App\Services\StudentService;
+use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
+    public function __construct(
+        protected StudentService $service
+    ) {}
+
     /**
-     * Display a listing of the resource.
+     * Get all students
      */
     public function index()
     {
-        //
+        return StudentResource::collection(
+            $this->service->all()
+        );
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Get single student
      */
-    public function create()
+    public function show($id)
     {
-        //
+        return new StudentResource(
+            $this->service->find($id)
+        );
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Create student
      */
-    public function store(StorestudentRequest $request)
+    public function store(StoreStudentRequest $request)
     {
-        //
+        $student = $this->service->create(
+            $request->all()
+        );
+
+        return (new StudentResource($student))
+            ->response()
+            ->setStatusCode(201);
     }
 
     /**
-     * Display the specified resource.
+     * Update student
      */
-    public function show(student $student)
+    public function update(Request $request, $id)
     {
-        //
+        return new StudentResource(
+            $this->service->update($id, $request->all())
+        );
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Delete student
      */
-    public function edit(student $student)
+    public function destroy($id)
     {
-        //
+        $this->service->delete($id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Student deleted successfully'
+        ]);
+    }
+    /**
+     * Enroll student in school
+     */
+    public function enroll($studentId, $schoolId)
+    {
+        return new StudentResource(
+            $this->service->enrollInSchool($studentId, $schoolId)
+        );
     }
 
     /**
-     * Update the specified resource in storage.
+     * Register subject for student
      */
-    public function update(UpdatestudentRequest $request, student $student)
+    public function registerSubject(RegisterSubjectRequest $request, $studentId)
     {
-        //
+        return new StudentResource(
+            $this->service->registerSubject($studentId, $request->subject_ids)
+        );
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Report (Graph / relations)
      */
-    public function destroy(student $student)
+    public function report()
     {
-        //
+        return ReportResource::collection(
+            $this->service->report()
+        );
     }
 }
