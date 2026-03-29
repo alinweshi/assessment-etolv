@@ -21,17 +21,16 @@ use App\Repositories\Neo4j\StudentNeo4jRepository;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        // register Neo4j client (always, even if using MySQL)
+        /**
+         * ✅ 1. Register Neo4j Client (Singleton)
+         */
         $this->app->singleton(ClientInterface::class, function () {
             return ClientBuilder::create()
                 ->withDriver(
                     'bolt',
-                    'bolt://' . env('NEO4J_HOST', 'localhost') . ':' . env('NEO4J_PORT', 7687),
+                    env('NEO4J_URI', 'bolt://127.0.0.1:7687'),
                     Authenticate::basic(
                         env('NEO4J_USERNAME', 'neo4j'),
                         env('NEO4J_PASSWORD', 'password')
@@ -41,29 +40,53 @@ class AppServiceProvider extends ServiceProvider
                 ->build();
         });
 
-        // true  → Neo4j repos
-        // false → Eloquent repos
-        $useNeo4j = env('DB_DRIVER', 'eloquent') === 'neo4j';
+        /**
+         * ✅ 2. Get Driver from config (مش env مباشر)
+         */
+        $driver = config('repository.driver');
 
-        $this->app->bind(
-            SchoolRepositoryInterface::class,
-            $useNeo4j ? SchoolNeo4jRepository::class : SchoolRepository::class
-        );
-
-        $this->app->bind(
-            SubjectRepositoryInterface::class,
-            $useNeo4j ? SubjectNeo4jRepository::class : SubjectRepository::class
-        );
-
-        $this->app->bind(
-            StudentRepositoryInterface::class,
-            $useNeo4j ? StudentNeo4jRepository::class : StudentRepository::class
-        );
+        /**
+         * ✅ 3. Bind Repositories Dynamically
+         */
+        $this->bindRepositories($driver);
     }
 
     /**
-     * Bootstrap any application services.
+     * 🔥 فصل الـ binding في method (أنضف + scalable)
      */
+    private function bindRepositories(string $driver): void
+    {
+        /**
+         * 🎯 School
+         */
+        $this->app->bind(SchoolRepositoryInterface::class, function ($app) use ($driver) {
+            return match ($driver) {
+                'neo4j' => $app->make(SchoolNeo4jRepository::class),
+                default => $app->make(SchoolRepository::class),
+            };
+        });
+
+        /**
+         * 🎯 Subject
+         */
+        $this->app->bind(SubjectRepositoryInterface::class, function ($app) use ($driver) {
+            return match ($driver) {
+                'neo4j' => $app->make(SubjectNeo4jRepository::class),
+                default => $app->make(SubjectRepository::class),
+            };
+        });
+
+        /**
+         * 🎯 Student
+         */
+        $this->app->bind(StudentRepositoryInterface::class, function ($app) use ($driver) {
+            return match ($driver) {
+                'neo4j' => $app->make(StudentNeo4jRepository::class),
+                default => $app->make(StudentRepository::class),
+            };
+        });
+    }
+
     public function boot(): void
     {
         //
