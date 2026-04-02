@@ -14,8 +14,8 @@ class RegisterSubjectRequest extends FormRequest
     public function rules()
     {
         return [
-            'subject_ids' => 'required|array|min:1',
-            'subject_ids.*' => ['required', Rule::exists('subjects', 'id')->whereNull('deleted_at')]
+            // 'subject_ids' => 'required|array|min:1',
+            // 'subject_ids.*' => ['required', Rule::exists('subjects', 'id')->whereNull('deleted_at')]
         ];
     }
 }

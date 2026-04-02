@@ -41,7 +41,7 @@ class StudentController extends Controller
     public function store(StoreStudentRequest $request)
     {
         $student = $this->service->create(
-            $request->all()
+            $request->validated()
         );
 
         return (new StudentResource($student))
@@ -55,7 +55,7 @@ class StudentController extends Controller
     public function update(Request $request, $id)
     {
         return new StudentResource(
-            $this->service->update($id, $request->all())
+            $this->service->update($id, $request->validated())
         );
     }
 
@@ -76,9 +76,11 @@ class StudentController extends Controller
      */
     public function enroll($studentId, $schoolId)
     {
-        return new StudentResource(
-            $this->service->enrollInSchool($studentId, $schoolId)
-        );
+        return response()->json([
+            'success' => true,
+            'message' => 'Student enrolled in school successfully',
+            'data' => $this->service->enrollInSchool($studentId, $schoolId)
+        ]);
     }
 
     /**
@@ -86,9 +88,11 @@ class StudentController extends Controller
      */
     public function registerSubject(RegisterSubjectRequest $request, $studentId)
     {
-        return new StudentResource(
-            $this->service->registerSubject($studentId, $request->subject_ids)
-        );
+        return response()->json([
+            'success' => true,
+            'message' => 'Subjects registered for student successfully',
+            'data' => $this->service->registerSubject($studentId, $request->subject_ids)
+        ]);
     }
 
     /**
@@ -96,8 +100,12 @@ class StudentController extends Controller
      */
     public function report()
     {
-        return ReportResource::collection(
+        return response()->json([
+            'success' => true,
+            'message' => 'Report generated successfully',
+            'data' =>
             $this->service->report()
-        );
+
+        ]);
     }
 }

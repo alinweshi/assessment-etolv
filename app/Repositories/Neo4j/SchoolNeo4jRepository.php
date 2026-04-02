@@ -128,7 +128,7 @@ class SchoolNeo4jRepository implements SchoolRepositoryInterface
         return $result->first()?->get('s');
     }
 
-    private static function toArray($node): array
+    public static function toArray($node): array
     {
         return [
             'id' => $node->getProperty('id'),

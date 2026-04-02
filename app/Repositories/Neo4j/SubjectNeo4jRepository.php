@@ -109,7 +109,7 @@ class SubjectNeo4jRepository implements SubjectRepositoryInterface
         );
     }
 
-    private static function toArray($node): array
+    public static function toArray($node): array
     {
         return [
             'id' => $node->getProperty('id'),

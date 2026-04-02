@@ -29,10 +29,11 @@ class StoreStudentRequest extends FormRequest
             'address' => 'required|string|max:255',
             'age' => 'required|integer|min:1|max:100',
             'gender' => 'required|string|max:255',
-            'school_id' => [
-                'required',
-                Rule::exists('schools', 'id')->whereNull('deleted_at')
-            ],
+
+            // 'school_id' => [
+            //     'required',
+            //     Rule::exists('schools', 'id')->whereNull('deleted_at')
+            // ],
         ];
     }
 }

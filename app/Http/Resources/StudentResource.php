@@ -17,19 +17,19 @@ class StudentResource extends JsonResource
             'address'  => $this->address ?? $this['address'],
             'age'      => $this->age ?? $this['age'],
             'gender'   => $this->gender ?? $this['gender'],
-            'school'   => $this->whenLoaded(
-                'school',
-                fn() => new SchoolResource($this->school),
-                $this['school'] ?? null
-            ),
-            'subjects' => $this->whenLoaded(
-                'subjects',
-                fn() => SubjectResource::collection($this->subjects),
-                $this['subjects'] ?? []
-            ),
-            'created_at' => $this->created_at ?? $this['created_at'],
-            'updated_at' => $this->updated_at ?? $this['updated_at'],
-            'deleted_at' => $this->deleted_at ?? $this['deleted_at'],
+
+            'school'   => isset($this->school)
+                ? new SchoolResource($this->school)
+                : null,
+
+            'subjects' => isset($this->subjects)
+                ? SubjectResource::collection($this->subjects)
+                : [],
+
+
+            'created_at' => $this->created_at ?? $this['created_at'] ?? null,
+            'updated_at' => $this->updated_at ?? $this['updated_at'] ?? null,
+            'deleted_at' => $this->deleted_at ?? $this['deleted_at'] ?? null,
         ];
     }
 }

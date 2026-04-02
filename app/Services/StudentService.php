@@ -18,7 +18,18 @@ class StudentService
     }
     public function create(array $data)
     {
-        return $this->repo->create($data);
+        // 1. Create student
+        $student = $this->repo->create($data);
+
+        // 2. Enroll in school (if provided)
+        if (!empty($data['school_id'])) {
+            $this->repo->enrollInSchool(
+                $student['id'],
+                $data['school_id']
+            );
+        }
+
+        return $student;
     }
     public function update($id, $data)
     {
