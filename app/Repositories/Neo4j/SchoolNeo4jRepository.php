@@ -78,12 +78,21 @@ class SchoolNeo4jRepository implements SchoolRepositoryInterface
 
     public function update($id, array $data)
     {
+        $school = $this->find($id);
+
+        if (!$school) {
+            throw new RecordNotFoundException("School with id $id not found");
+        }
+
         return $this->client->writeTransaction(
+
             static function (TransactionInterface $tsx) use ($id, $data) {
+
                 $result = $tsx->run(
                     'MATCH (sc:School {id: $id}) SET sc.name = $name RETURN sc',
                     ['id' => $id, 'name' => $data['name']]
                 );
+
                 return self::toArray($result->first()->get('sc'));
             }
         );
@@ -91,6 +100,11 @@ class SchoolNeo4jRepository implements SchoolRepositoryInterface
 
     public function delete($id)
     {
+        $school = $this->find($id);
+
+        if (!$school) {
+            throw new RecordNotFoundException("School with id $id not found");
+        }
         $this->client->writeTransaction(
             static function (TransactionInterface $tsx) use ($id) {
                 $tsx->run(
