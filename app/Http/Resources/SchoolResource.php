@@ -10,17 +10,18 @@ class SchoolResource extends JsonResource
     public function toArray($request): array
     {
         return [
-            'id' => $this->id ?? $this['id'],
-            'name' => $this->name ?? $this['name'],
-            'address' => $this->address ?? $this['address'],
-            'phone' => $this->phone ?? $this['phone'],
-            'email' => $this->email ?? $this['email'],
-            'website' => $this->website ?? $this['website'],
-            'created_at' => $this->created_at ?? $this['created_at'],
-            'updated_at' => $this->updated_at ?? $this['updated_at'],
-            'deleted_at' => $this->deleted_at ?? $this['deleted_at'],
-            'students' => StudentResource::collection($this->whenLoaded('students')),
-
+            'id' => $this->id ?? $this['id'] ?? null,
+            'name' => $this->name ?? $this['name'] ?? null,
+            'address' => $this->address ?? $this['address'] ?? null,
+            'phone' => $this->phone ?? $this['phone'] ?? null,
+            'email' => $this->email ?? $this['email'] ?? null,
+            'website' => $this->website ?? $this['website'] ?? null,
+            'created_at' => $this->created_at ?? $this['created_at'] ?? null,
+            'updated_at' => $this->updated_at ?? $this['updated_at'] ?? null,
+            'deleted_at' => $this->deleted_at ?? $this['deleted_at'] ?? null,
+            'students' => isset($this->students)
+                ? StudentResource::collection($this->students)
+                : [],
         ];
     }
 }

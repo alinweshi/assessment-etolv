@@ -48,6 +48,19 @@ services:
                 - "-p${DB_PASSWORD}"
             retries: 3
             timeout: 5s
+    neo4j:
+        image: neo4j:latest
+        container_name: neo4j
+        ports:
+            - "7474:7474"
+            - "7687:7687"
+        environment:
+            - NEO4J_AUTH=neo4j/A@12345678
+            - NEO4J_server_memory_heap_initial__size=256m
+            - NEO4J_server_memory_heap_max__size=512m
+            - NEO4J_server_memory_pagecache_size=256m
+        networks:
+            - sail
     phpmyadmin:
         image: phpmyadmin/phpmyadmin
         restart: always

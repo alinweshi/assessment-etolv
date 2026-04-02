@@ -29,9 +29,11 @@ class SchoolController extends Controller
 
     public function store(StoreSchoolRequest $request)
     {
+        // dd($request->validated());
         $school = $this->service->create(
             $request->validated()
         );
+        // dd($school);
 
         return (new SchoolResource($school))
             ->response()

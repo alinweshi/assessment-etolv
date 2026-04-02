@@ -19,4 +19,7 @@ Route::prefix('v1')->group(function () {
     Route::post('students/{id}/enroll/{schoolId}',   [StudentController::class, 'enroll']);
     Route::post('students/{id}/subjects', [StudentController::class, 'registerSubject']);
     Route::get('students-report',         [StudentController::class, 'report']);
+    Route::get('/test-repo', function (\App\Interfaces\SchoolRepositoryInterface $repo) {
+        return get_class($repo);
+    });
 });
