@@ -2,6 +2,8 @@
 
 namespace App\Interfaces;
 
+use App\Interfaces\CrudRepositoryInterface;
+
 interface StudentRepositoryInterface extends CrudRepositoryInterface
 {
     // only student has these extra methods

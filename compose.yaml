@@ -19,6 +19,8 @@ services:
             IGNITION_LOCAL_SITES_PATH: "${PWD}"
         volumes:
             - ".:/var/www/html"
+            - "./xdebug.ini:/etc/php/8.5/cli/conf.d/99-xdebug-override.ini"
+
         networks:
             - sail
         depends_on:
@@ -61,6 +63,11 @@ services:
             - NEO4J_server_memory_pagecache_size=256m
         networks:
             - sail
+        volumes:
+            - "./neo4j/data:/data"
+            - "./neo4j/logs:/logs"
+            - "./neo4j/plugins:/plugins"
+
     phpmyadmin:
         image: phpmyadmin/phpmyadmin
         restart: always

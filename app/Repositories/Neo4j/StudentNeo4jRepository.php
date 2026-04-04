@@ -4,8 +4,6 @@ namespace App\Repositories\Neo4j;
 
 use App\Exceptions\RecordNotFoundException;
 use App\Interfaces\StudentRepositoryInterface;
-use App\Repositories\Eloquent\SchoolRepository;
-use App\Repositories\Eloquent\SubjectRepository;
 use Laudis\Neo4j\Contracts\ClientInterface;
 use Laudis\Neo4j\Contracts\TransactionInterface;
 

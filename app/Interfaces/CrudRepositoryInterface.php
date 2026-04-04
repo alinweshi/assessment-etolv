@@ -2,7 +2,6 @@
 
 namespace App\Interfaces;
 
-namespace App\Interfaces;
 
 interface CrudRepositoryInterface
 {
