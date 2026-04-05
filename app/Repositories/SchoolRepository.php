@@ -28,6 +28,11 @@ class SchoolRepository implements SchoolRepositoryInterface
         return $school;
     }
 
+    public function findByName($name)
+    {
+        return $this->model::where('name', $name)->first();
+    }
+
     public function create(array $data)
     {
         return $this->model::create($data);
@@ -35,6 +40,7 @@ class SchoolRepository implements SchoolRepositoryInterface
 
     public function update($id, array $data)
     {
+        // dd($id, $data);
         $school = $this->find($id); // reuses find() + throws if missing
 
         $school->update($data);

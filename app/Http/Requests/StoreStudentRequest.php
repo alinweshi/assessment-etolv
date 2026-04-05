@@ -2,38 +2,28 @@
 
 namespace App\Http\Requests;
 
+use App\Services\ValidationService;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreStudentRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+    public function __construct(private ValidationService $validation) {}
+
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:students,email',
-            'phone' => 'required|string|max:255|unique:students,phone',
-            'address' => 'required|string|max:255',
-            'age' => 'required|integer|min:1|max:100',
-            'gender' => 'required|string|max:255',
-
-            // 'school_id' => [
-            //     'required',
-            //     Rule::exists('schools', 'id')->whereNull('deleted_at')
-            // ],
+            'name'      => ['required', 'string', 'max:255'],
+            'email'     => ['required', 'email', 'max:255',  $this->validation->uniqueStudentEmail()],
+            'phone'     => ['required', 'string', 'max:20',  $this->validation->uniqueStudentPhone()],
+            'address'   => ['required', 'string', 'max:255'],
+            'age'       => ['required', 'integer', 'min:1', 'max:100'],
+            'gender'    => ['required', 'string', 'in:male,female'],
+            'school_id' => ['nullable', 'string',            $this->validation->schoolExists()],
         ];
     }
 }

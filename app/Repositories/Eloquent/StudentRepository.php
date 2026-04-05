@@ -93,4 +93,16 @@ class StudentRepository implements StudentRepositoryInterface
                 'subjects' => $s->subjects->pluck('name'),
             ]);
     }
+    public function existsByEmail(string $email, ?string $exceptId = null): bool
+    {
+        return Student::where('email', $email)
+            ->when($exceptId, fn($q) => $q->where('id', '!=', $exceptId))
+            ->exists();
+    }
+    public function existsByPhone(string $phone, ?string $exceptId = null): bool
+    {
+        return Student::where('phone', $phone)
+            ->when($exceptId, fn($q) => $q->where('id', '!=', $exceptId))
+            ->exists();
+    }
 }

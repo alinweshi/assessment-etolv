@@ -10,4 +10,6 @@ interface StudentRepositoryInterface extends CrudRepositoryInterface
     public function enrollInSchool($studentId, $schoolId);
     public function registerSubject($studentId, array $subjectIds = []);
     public function report();
+    public function existsByEmail(string $email, ?string $exceptId = null): bool;
+    public function existsByPhone(string $phone, ?string $exceptId = null): bool;
 }

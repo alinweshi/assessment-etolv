@@ -127,6 +127,28 @@ class SchoolNeo4jRepository implements SchoolRepositoryInterface
 
         return $result->first()?->get('s');
     }
+    public function existsByEmail(string $email, ?string $exceptId = null): bool
+    {
+        $result = $this->client->run(
+            'MATCH (s:School {email: $email})
+             WHERE s.id <> $exceptId
+             RETURN count(s) > 0 AS exists',
+            ['email' => $email, 'exceptId' => $exceptId ?? '']
+        );
+
+        return $result->first()->get('exists');
+    }
+    public function existsByPhone(string $phone, ?string $exceptId = null): bool
+    {
+        $result = $this->client->run(
+            'MATCH (s:School {phone: $phone})
+             WHERE s.id <> $exceptId
+             RETURN count(s) > 0 AS exists',
+            ['phone' => $phone, 'exceptId' => $exceptId ?? '']
+        );
+
+        return $result->first()->get('exists');
+    }
 
     public static function toArray($node): array
     {

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\EnrollStudentRequest;
 use App\Http\Requests\RegisterSubjectRequest;
 use App\Http\Requests\StoreStudentRequest;
+use App\Http\Requests\UpdateStudentRequest;
 use App\Http\Resources\ReportResource;
 use App\Http\Resources\StudentResource;
 use App\Services\StudentService;
@@ -52,7 +54,7 @@ class StudentController extends Controller
     /**
      * Update student
      */
-    public function update(Request $request, $id)
+    public function update(UpdateStudentRequest $request, $id)
     {
         return new StudentResource(
             $this->service->update($id, $request->validated())
@@ -74,12 +76,18 @@ class StudentController extends Controller
     /**
      * Enroll student in school
      */
-    public function enroll($studentId, $schoolId)
+
+    public function enroll(EnrollStudentRequest $request, string $student)
     {
+        $data = $this->service->enrollInSchool(
+            $student,
+            $request->input('school_id')
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Student enrolled in school successfully',
-            'data' => $this->service->enrollInSchool($studentId, $schoolId)
+            'data'    => $data,
         ]);
     }
 

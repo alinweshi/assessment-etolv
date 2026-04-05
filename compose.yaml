@@ -1,11 +1,11 @@
 services:
     laravel.test:
         build:
-            context: "./vendor/laravel/sail/runtimes/8.5"
+            context: "./vendor/laravel/sail/runtimes/8.3"
             dockerfile: Dockerfile
             args:
                 WWWGROUP: "${WWWGROUP}"
-        image: "sail-8.5/app"
+        image: "sail-8.3/app"
         extra_hosts:
             - "host.docker.internal:host-gateway"
         ports:
@@ -19,7 +19,7 @@ services:
             IGNITION_LOCAL_SITES_PATH: "${PWD}"
         volumes:
             - ".:/var/www/html"
-            - "./xdebug.ini:/etc/php/8.5/cli/conf.d/99-xdebug-override.ini"
+            - "./xdebug.ini:/etc/php/8.3/cli/conf.d/99-xdebug-override.ini"
 
         networks:
             - sail
@@ -54,8 +54,8 @@ services:
         image: neo4j:latest
         container_name: neo4j
         ports:
-            - "7474:7474"
-            - "7687:7687"
+            - "7475:7474"
+            - "7685:7687"
         environment:
             - NEO4J_AUTH=neo4j/A@12345678
             - NEO4J_server_memory_heap_initial__size=256m

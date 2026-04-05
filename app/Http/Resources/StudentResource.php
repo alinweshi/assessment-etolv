@@ -5,18 +5,20 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class StudentResource extends JsonResource
+class StudentResource extends BaseResource
 {
     public function toArray($request): array
     {
+        $data = $this->data();
+
         return [
-            'id'       => $this->id ?? $this['id'],
-            'name'     => $this->name ?? $this['name'],
-            'email'    => $this->email ?? $this['email'],
-            'phone'    => $this->phone ?? $this['phone'],
-            'address'  => $this->address ?? $this['address'],
-            'age'      => $this->age ?? $this['age'],
-            'gender'   => $this->gender ?? $this['gender'],
+            'id'       => $data['id'] ?? $this->getId() ?? null,
+            'name'     => $data['name'] ?? null,
+            'email'    => $data['email'] ?? null,
+            'phone'    => $data['phone'] ?? null,
+            'address'  => $data['address'] ?? null,
+            'age'      => $data['age'] ?? null,
+            'gender'   => $data['gender'] ?? $this['gender'],
 
             'school'   => isset($this->school)
                 ? new SchoolResource($this->school)
@@ -27,9 +29,9 @@ class StudentResource extends JsonResource
                 : [],
 
 
-            'created_at' => $this->created_at ?? $this['created_at'] ?? null,
-            'updated_at' => $this->updated_at ?? $this['updated_at'] ?? null,
-            'deleted_at' => $this->deleted_at ?? $this['deleted_at'] ?? null,
+            'created_at' => $data['created_at'] ?? null,
+            'updated_at' => $data['updated_at'] ?? null,
+            'deleted_at' => $data['deleted_at'] ?? null,
         ];
     }
 }

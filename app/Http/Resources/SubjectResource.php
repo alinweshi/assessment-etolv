@@ -4,16 +4,18 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class SubjectResource extends JsonResource
+class SubjectResource extends BaseResource
 {
     public function toArray($request): array
     {
+        $data = $this->data();
+
         return [
-            'id' => $this->id ?? $this['id'],
-            'name' => $this->name ?? $this['name'],
-            'created_at' => $this->created_at ?? $this['created_at'] ?? null,
-            'updated_at' => $this->updated_at ?? $this['updated_at'] ?? null,
-            'deleted_at' => $this->deleted_at ?? $this['deleted_at'] ?? null,
+            'id' => $data['id'] ?? null,
+            'name' => $data['name'] ?? null,
+            'created_at' => $data['created_at'] ?? null,
+            'updated_at' => $data['updated_at'] ?? null,
+            'deleted_at' => $data['deleted_at'] ?? null,
         ];
     }
 }

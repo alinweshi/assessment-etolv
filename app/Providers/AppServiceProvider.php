@@ -2,93 +2,55 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Laudis\Neo4j\ClientBuilder;
-use Laudis\Neo4j\Authentication\Authenticate;
-use Laudis\Neo4j\Contracts\ClientInterface;
-
 use App\Interfaces\SchoolRepositoryInterface;
-use App\Interfaces\SubjectRepositoryInterface;
 use App\Interfaces\StudentRepositoryInterface;
+use App\Interfaces\SubjectRepositoryInterface;
 
+// Eloquent
 use App\Repositories\Eloquent\SchoolRepository;
-use App\Repositories\Eloquent\SubjectRepository;
 use App\Repositories\Eloquent\StudentRepository;
+use App\Repositories\Eloquent\SubjectRepository;
 
+// Neo4j
 use App\Repositories\Neo4j\SchoolNeo4jRepository;
-use App\Repositories\Neo4j\SubjectNeo4jRepository;
 use App\Repositories\Neo4j\StudentNeo4jRepository;
+use App\Repositories\Neo4j\SubjectNeo4jRepository;
+
+use App\Services\ValidationService;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
+    private array $repositories = [
+        SchoolRepositoryInterface::class => [
+            'eloquent' => SchoolRepository::class,
+            'neo4j'    => SchoolNeo4jRepository::class,
+        ],
+        StudentRepositoryInterface::class => [
+            'eloquent' => StudentRepository::class,
+            'neo4j'    => StudentNeo4jRepository::class,
+        ],
+        SubjectRepositoryInterface::class => [
+            'eloquent' => SubjectRepository::class,
+            'neo4j'    => SubjectNeo4jRepository::class,
+        ],
+    ];
+
     public function register(): void
     {
-        /**
-         * ✅ 1. Register Neo4j Client (Singleton)
-         */
-        $this->app->singleton(ClientInterface::class, function () {
-            return ClientBuilder::create()
-                ->withDriver(
-                    'bolt',
-                    env('NEO4J_URI', 'bolt://127.0.0.1:7687'),
-                    Authenticate::basic(
-                        env('NEO4J_USERNAME', 'neo4j'),
-                        env('NEO4J_PASSWORD', 'password')
-                    )
-                )
-                ->withDefaultDriver('bolt')
-                ->build();
-        });
+        $driver = config('repository.driver', 'eloquent');
 
-        /**
-         * ✅ 2. Get Driver from config (مش env مباشر)
-         */
-        $driver = config('repository.driver');
+        foreach ($this->repositories as $interface => $map) {
+            $concrete = $map[$driver] ?? $map['eloquent'];
 
-        /**
-         * ✅ 3. Bind Repositories Dynamically
-         */
-        $this->bindRepositories($driver);
+            $this->app->bind(
+                $interface,
+                fn() => $this->app->make($concrete)
+            );
+        }
+
+        $this->app->singleton(ValidationService::class);
     }
 
-    /**
-     * 🔥 فصل الـ binding في method (أنضف + scalable)
-     */
-    private function bindRepositories(string $driver): void
-    {
-        /**
-         * 🎯 School
-         */
-        $this->app->bind(SchoolRepositoryInterface::class, function ($app) use ($driver) {
-            return match ($driver) {
-                'neo4j' => $app->make(SchoolNeo4jRepository::class),
-                default => $app->make(SchoolRepository::class),
-            };
-        });
-
-        /**
-         * 🎯 Subject
-         */
-        $this->app->bind(SubjectRepositoryInterface::class, function ($app) use ($driver) {
-            return match ($driver) {
-                'neo4j' => $app->make(SubjectNeo4jRepository::class),
-                default => $app->make(SubjectRepository::class),
-            };
-        });
-
-        /**
-         * 🎯 Student
-         */
-        $this->app->bind(StudentRepositoryInterface::class, function ($app) use ($driver) {
-            return match ($driver) {
-                'neo4j' => $app->make(StudentNeo4jRepository::class),
-                default => $app->make(StudentRepository::class),
-            };
-        });
-    }
-
-    public function boot(): void
-    {
-        //
-    }
+    public function boot(): void {}
 }

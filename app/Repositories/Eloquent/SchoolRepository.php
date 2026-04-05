@@ -49,4 +49,16 @@ class SchoolRepository implements SchoolRepositoryInterface
 
         $student->delete();
     }
+    public function existsByEmail(string $email, ?string $exceptId = null): bool
+    {
+        return School::where('email', $email)
+            ->when($exceptId, fn($q) => $q->where('id', '!=', $exceptId))
+            ->exists();
+    }
+    public function existsByPhone(string $phone, ?string $exceptId = null): bool
+    {
+        return School::where('phone', $phone)
+            ->when($exceptId, fn($q) => $q->where('id', '!=', $exceptId))
+            ->exists();
+    }
 }

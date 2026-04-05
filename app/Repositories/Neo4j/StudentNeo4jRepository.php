@@ -141,23 +141,24 @@ class StudentNeo4jRepository implements StudentRepositoryInterface
     }
 
     // 🔗 Student -> School
-    public function enrollInSchool($studentId, $schoolId)
+    public function enrollInSchool($studentId,  $schoolId): array
     {
-        $result = $this->client->run(
-            '
+        // Check already enrolled
+        $existing = $this->client->run('
+        MATCH (st:Student {id: $studentId})-[:BELONGS_TO]->(sc:School {id: $schoolId})
+        RETURN st LIMIT 1
+    ', ['studentId' => $studentId, 'schoolId' => $schoolId]);
+
+        if (!$existing->isEmpty()) {
+            throw new \Exception('Student is already enrolled in this school.');
+        }
+
+        $result = $this->client->run('
         MATCH (st:Student {id: $studentId})
         MATCH (sc:School {id: $schoolId})
-
         MERGE (st)-[:BELONGS_TO]->(sc)
-
-
         RETURN st, sc
-        ',
-            [
-                'studentId' => $studentId,
-                'schoolId' => $schoolId
-            ]
-        );
+    ', ['studentId' => $studentId, 'schoolId' => $schoolId]);
 
         if ($result->isEmpty()) {
             throw new RecordNotFoundException('Student or School not found');
@@ -166,10 +167,8 @@ class StudentNeo4jRepository implements StudentRepositoryInterface
         $record = $result->first();
 
         return [
-            'student'  => $this->toArray($record->get('st')),
-            'school'   => $record->get('sc')
-                ? $this->schoolRepo->toArray($record->get('sc'))
-                : null,
+            'student' => $this->toArray($record->get('st')),
+            'school'  => $this->schoolRepo->toArray($record->get('sc')),
         ];
     }
 
@@ -242,5 +241,28 @@ class StudentNeo4jRepository implements StudentRepositoryInterface
                     ->toArray(),
             ];
         })->toArray();
+    }
+    public function existsByEmail(string $email, ?string $exceptId = null): bool
+    {
+        $cypher = $exceptId
+            ? 'MATCH (s:Student {email: $email}) WHERE s.id <> $id RETURN s LIMIT 1'
+            : 'MATCH (s:Student {email: $email}) RETURN s LIMIT 1';
+
+        return !$this->client->run(
+            $cypher,
+            ['email' => $email, 'id' => $exceptId]
+        )->isEmpty();
+    }
+
+    public function existsByPhone(string $phone, ?string $exceptId = null): bool
+    {
+        $cypher = $exceptId
+            ? 'MATCH (s:Student {phone: $phone}) WHERE s.id <> $id RETURN s LIMIT 1'
+            : 'MATCH (s:Student {phone: $phone}) RETURN s LIMIT 1';
+
+        return !$this->client->run(
+            $cypher,
+            ['phone' => $phone, 'id' => $exceptId]
+        )->isEmpty();
     }
 }
