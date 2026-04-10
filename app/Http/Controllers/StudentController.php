@@ -3,13 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\EnrollStudentRequest;
+use App\Http\Requests\IndexRequest;
 use App\Http\Requests\RegisterSubjectRequest;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
-use App\Http\Resources\ReportResource;
 use App\Http\Resources\StudentResource;
 use App\Services\StudentService;
-use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
@@ -20,13 +19,15 @@ class StudentController extends Controller
     /**
      * Get all students
      */
-    public function index()
+    public function index(IndexRequest $request)
     {
-        return StudentResource::collection(
-            $this->service->all()
-        );
-    }
+        $data = $this->service->all($request->validated());
 
+        return StudentResource::collection($data['data'])
+            ->additional([
+                'meta' => $data['meta']
+            ]);
+    }
     /**
      * Get single student
      */
@@ -87,7 +88,7 @@ class StudentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Student enrolled in school successfully',
-            'data'    => $data,
+            'data'    => new StudentResource($data),
         ]);
     }
 
@@ -96,10 +97,11 @@ class StudentController extends Controller
      */
     public function registerSubject(RegisterSubjectRequest $request, $studentId)
     {
+        $data = $this->service->registerSubject($studentId, $request->subject_ids);
         return response()->json([
             'success' => true,
             'message' => 'Subjects registered for student successfully',
-            'data' => $this->service->registerSubject($studentId, $request->subject_ids)
+            'data' => new StudentResource($data),
         ]);
     }
 

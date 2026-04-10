@@ -24,6 +24,8 @@ class StoreStudentRequest extends FormRequest
             'age'       => ['required', 'integer', 'min:1', 'max:100'],
             'gender'    => ['required', 'string', 'in:male,female'],
             'school_id' => ['nullable', 'string',            $this->validation->schoolExists()],
+            'created_at' => ['sometimes', 'date', 'gte:today'],
+            'updated_at' => ['sometimes', 'date', 'gte:today'],
         ];
     }
 }

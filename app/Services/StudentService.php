@@ -8,9 +8,9 @@ class StudentService
 {
     public function __construct(protected StudentRepositoryInterface $repo) {}
 
-    public function all()
+    public function all($request)
     {
-        return $this->repo->all();
+        return $this->repo->all($request);
     }
     public function find($id)
     {
@@ -18,22 +18,34 @@ class StudentService
     }
     public function create(array $data)
     {
-        // 1. Create student
-        $student = $this->repo->create($data);
 
-        // 2. Enroll in school (if provided)
+        $result = $this->repo->create($data);
+
+
+        $studentId = $result['student']['id'];
+        $this->enrollInSchool($studentId, $data['school_id']);
+        // $this->registerSubject($studentId, $data['subject_ids']);
+
+
+        return $result;
+    }
+    public function update($id, array $data)
+    {
+        // 1. Update basic info
+        $student = $this->repo->update($id, $data);
+
+        // 2. Update School (if provided)
         if (!empty($data['school_id'])) {
-            $this->repo->enrollInSchool(
-                $student['id'],
-                $data['school_id']
-            );
+            $this->repo->enrollInSchool($id, $data['school_id']);
         }
 
-        return $student;
-    }
-    public function update($id, $data)
-    {
-        return $this->repo->update($id, $data);
+        // 3. Update Subjects (if provided)
+        if (!empty($data['subject_ids'])) {
+            $this->repo->registerSubject($id, $data['subject_ids']);
+        }
+
+        // 4. Return the fresh, full data structure
+        return $this->repo->find($id);
     }
     public function delete($id)
     {

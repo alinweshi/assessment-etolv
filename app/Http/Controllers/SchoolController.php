@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\IndexRequest;
 use App\Http\Requests\StoreSchoolRequest;
 use App\Http\Requests\UpdateSchoolRequest;
 use App\Http\Resources\SchoolResource;
@@ -13,10 +14,10 @@ class SchoolController extends Controller
         protected SchoolService $service
     ) {}
 
-    public function index()
+    public function index(IndexRequest $request)
     {
         return SchoolResource::collection(
-            $this->service->all()
+            $this->service->all($request)
         );
     }
 

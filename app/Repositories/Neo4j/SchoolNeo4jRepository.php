@@ -12,7 +12,7 @@ class SchoolNeo4jRepository implements SchoolRepositoryInterface
 {
     public function __construct(protected ClientInterface $client) {}
 
-    public function all()
+    public function all($request)
     {
         $skip = (request()->input('page', 1) - 1) * 10;
 
