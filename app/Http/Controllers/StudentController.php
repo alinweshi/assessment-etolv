@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\EnrollStudentRequest;
 use App\Http\Requests\IndexRequest;
 use App\Http\Requests\RegisterSubjectRequest;
+use App\Http\Requests\ReportRequest;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
+use App\Http\Resources\PaginatedCollection;
+use App\Http\Resources\ReportResource;
 use App\Http\Resources\StudentResource;
 use App\Services\StudentService;
 
@@ -23,10 +26,10 @@ class StudentController extends Controller
     {
         $data = $this->service->all($request->validated());
 
-        return StudentResource::collection($data['data'])
-            ->additional([
-                'meta' => $data['meta']
-            ]);
+        return (new PaginatedCollection(
+            StudentResource::collection($data['data']),
+            $data['meta']
+        ));
     }
     /**
      * Get single student
@@ -108,14 +111,17 @@ class StudentController extends Controller
     /**
      * Report (Graph / relations)
      */
-    public function report()
+    public function report(ReportRequest $request)
     {
-        return response()->json([
-            'success' => true,
-            'message' => 'Report generated successfully',
-            'data' =>
-            $this->service->report()
+        $data = $this->service->report(
+            page: $request->integer('page', 1),
+            limit: $request->integer('limit', 20),
+            filters: $request->only(['from', 'to', 'school_id', 'student_id']),
+        );
 
-        ]);
+        return new PaginatedCollection(
+            ReportResource::collection($data['data']),
+            $data['meta']
+        );
     }
 }

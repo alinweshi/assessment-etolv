@@ -14,8 +14,8 @@ class SubjectResource extends BaseResource
             'id' => $data['id'] ?? null,
             'name' => $data['name'] ?? null,
             'created_at' => $data['created_at'] ?? null,
-            'updated_at' => $data['updated_at'] ?? null,
-            'deleted_at' => $data['deleted_at'] ?? null,
+            'created_at' => $this->formatDate($data['created_at'] ?? null),
+            'updated_at' => $this->formatDate($data['updated_at'] ?? null),
         ];
     }
 }

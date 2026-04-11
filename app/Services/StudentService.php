@@ -51,8 +51,8 @@ class StudentService
     {
         return $this->repo->registerSubject($sId, $subId);
     }
-    public function report()
+    public function report(int $page, int $limit = 20, array $filters = []): array
     {
-        return $this->repo->report();
+        return $this->repo->report($page, $limit, $filters);
     }
 }

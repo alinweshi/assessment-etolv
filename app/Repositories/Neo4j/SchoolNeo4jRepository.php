@@ -2,31 +2,71 @@
 
 namespace App\Repositories\Neo4j;
 
+use App\Exceptions\DuplicateFieldException;
+use App\Exceptions\Neo4jConstraintException;
 use App\Exceptions\RecordNotFoundException;
 use App\Interfaces\SchoolRepositoryInterface;
+use App\Traits\HasMeta;
 use Laudis\Neo4j\Contracts\ClientInterface;
 use Laudis\Neo4j\Contracts\TransactionInterface;
-
+use Laudis\Neo4j\Types\Node;
 
 class SchoolNeo4jRepository implements SchoolRepositoryInterface
 {
+    use HasMeta;
+
     public function __construct(protected ClientInterface $client) {}
 
-    public function all($request)
+    public static function nodeToArray(Node $node): array
     {
-        $skip = (request()->input('page', 1) - 1) * 10;
+        $props = $node->getProperties();
 
-        return $this->client->run(
-            'MATCH (sc:School)
-            RETURN sc
-            ORDER BY sc.name
-            SKIP $skip LIMIT 10',
-            ['skip' => $skip]
-        )->map(fn($row) => $this->toArray($row->get('sc')))->toArray();
+        return [
+            'id'      => $props->get('id'),
+            'name'    => $props->get('name'),
+            'address' => $props->get('address') ?? null,
+            'phone'   => $props->get('phone') ?? null,
+            'email'   => $props->get('email') ?? null,
+            'website' => $props->get('website') ?? null,
+            'created_at' => $props->get('created_at'),
+            'updated_at' => $props->get('updated_at'),
+            'deleted_at' => null
+
+        ];
     }
 
 
-    public function find($id)
+
+    public function all(array $data): array
+    {
+        $page  = max(1, (int) ($data['page']  ?? 1));
+        $limit = max(1, (int) ($data['limit'] ?? 10));
+        $skip  = ($page - 1) * $limit;
+
+        $result = $this->client->run(
+            'MATCH (sc:School)
+                WHERE sc.deleted_at IS NULL
+                WITH sc
+                ORDER BY sc.name ASC
+                SKIP $skip LIMIT $limit
+                RETURN sc',
+            ['skip' => $skip, 'limit' => $limit]
+        );
+
+        $total = $this->client
+            ->run('MATCH (sc:School) WHERE sc.deleted_at IS NULL RETURN count(sc) AS total')
+            ->first()
+            ->get('total');
+
+        return [
+            'data' => $result
+                ->map(fn($row) => self::nodeToArray($row->get('sc')))
+                ->toArray(),
+            'meta' => self::buildMeta($page, $limit, $total),
+        ];
+    }
+
+    public function find($id): array
     {
         $result = $this->client->run(
             'MATCH (sc:School {id: $id}) RETURN sc LIMIT 1',
@@ -37,129 +77,141 @@ class SchoolNeo4jRepository implements SchoolRepositoryInterface
             throw new RecordNotFoundException("School with id $id not found");
         }
 
-        $record = $result->first();
-
-        return $this->toArray($record->get('sc'));
+        return self::nodeToArray($result->first()->get('sc'));
     }
-    public function create(array $data)
+
+    public function create(array $data): array
     {
-        return $this->client->writeTransaction(
-            static function (TransactionInterface $tsx) use ($data) {
-                $result = $tsx->run(
-                    'CREATE (sc:School {
-                    id: randomUUID(),
-                    name: $name,
-                    address: $address,
-                    phone: $phone,
-                    email: $email,
-                    website: $website
-                }) RETURN sc',
-                    [
-                        'name' => $data['name'],
-                        'address' => $data['address'] ?? null,
-                        'phone' => $data['phone'] ?? null,
-                        'email' => $data['email'] ?? null,
-                        'website' => $data['website'] ?? null,
-                    ]
-                );
+        try {
+            return $this->client->writeTransaction(
+                static function (TransactionInterface $tsx) use ($data) {
+                    $result = $tsx->run(
+                        'CREATE (sc:School {
+                            id:      randomUUID(),
+                            name:    $name,
+                            address: $address,
+                            phone:   $phone,
+                            email:   $email,
+                            website: $website,
+                            created_at: datetime(),
+                            updated_at: datetime()
+                        }) RETURN sc',
+                        [
+                            'name'    => $data['name'],
+                            'address' => $data['address'] ?? null,
+                            'phone'   => $data['phone']   ?? null,
+                            'email'   => $data['email']   ?? null,
+                            'website' => $data['website'] ?? null,
+                        ]
+                    );
 
-                $record = $result->first();
+                    if ($result->isEmpty()) {
+                        throw new \Exception('Neo4j did not return a result.');
+                    }
 
-                if (!$record) {
-                    throw new \Exception('Neo4j did not return a result');
+                    return self::nodeToArray($result->first()->get('sc'));
                 }
-
-                $node = $record->get('sc');
-
-                return self::toArray($node);
+            );
+        } catch (\Laudis\Neo4j\Exception\Neo4jException $e) {
+            if (Neo4jConstraintException::isConstraintViolation($e)) {
+                $field = Neo4jConstraintException::parseField($e, [
+                    'name'  => 'Name',
+                    'email' => 'Email',
+                    'phone' => 'Phone',
+                ]);
+                throw new DuplicateFieldException("{$field} already exists.");
             }
-        );
+            throw $e;
+        }
     }
 
-    public function update($id, array $data)
+    public function update($id, array $data): array
     {
-        $school = $this->find($id);
+        try {
+            return $this->client->writeTransaction(
+                static function (TransactionInterface $tsx) use ($id, $data) {
+                    $result = $tsx->run(
+                        'MATCH (sc:School {id: $id})
+                        WHERE sc.deleted_at IS NULL
+                        SET sc += $props,
+                            sc.updated_at = datetime()
+                        RETURN sc',
+                        [
+                            'id'    => $id,
+                            'props' => array_filter([
+                                'name'    => $data['name']    ?? null,
+                                'address' => $data['address'] ?? null,
+                                'phone'   => $data['phone']   ?? null,
+                                'email'   => $data['email']   ?? null,
+                                'website' => $data['website'] ?? null,
+                            ], fn($v) => $v !== null),
+                        ]
+                    );
 
-        if (!$school) {
-            throw new RecordNotFoundException("School with id $id not found");
-        }
+                    if ($result->isEmpty()) {
+                        throw new RecordNotFoundException("School with id $id not found");
+                    }
 
-        return $this->client->writeTransaction(
-
-            static function (TransactionInterface $tsx) use ($id, $data) {
-
-                $result = $tsx->run(
-                    'MATCH (sc:School {id: $id}) SET sc.name = $name RETURN sc',
-                    ['id' => $id, 'name' => $data['name']]
-                );
-
-                return self::toArray($result->first()->get('sc'));
+                    return self::nodeToArray($result->first()->get('sc'));
+                }
+            );
+        } catch (\Laudis\Neo4j\Exception\Neo4jException $e) {
+            if (Neo4jConstraintException::isConstraintViolation($e)) {
+                $field = Neo4jConstraintException::parseField($e, [
+                    'name'  => 'Name',
+                    'email' => 'Email',
+                    'phone' => 'Phone',
+                ]);
+                throw new DuplicateFieldException("{$field} already exists.");
             }
-        );
+            throw $e;
+        }
     }
 
-    public function delete($id)
+    public function delete($id): void
     {
-        $school = $this->find($id);
-
-        if (!$school) {
-            throw new RecordNotFoundException("School with id $id not found");
-        }
         $this->client->writeTransaction(
             static function (TransactionInterface $tsx) use ($id) {
-                $tsx->run(
-                    'MATCH (sc:School {id: $id}) DETACH DELETE sc',
+
+                $result = $tsx->run(
+                    'MATCH (sc:School {id: $id})
+                 WHERE sc.deleted_at IS NULL
+                 SET sc.deleted_at = datetime()
+                 RETURN sc',
                     ['id' => $id]
                 );
+
+                if ($result->isEmpty()) {
+                    throw new RecordNotFoundException("School with id $id not found");
+                }
             }
         );
     }
 
-    public function findByName(string $name)
-    {
-        $result = $this->client->run(
-            'MATCH (s:School {name: $name}) RETURN s LIMIT 1',
-            ['name' => $name]
-        );
-        if ($result->isEmpty()) {
-            return [];
-        }
 
-        return $result->first()?->get('s');
-    }
+    /** @used-by \App\Services\ValidationService */
     public function existsByEmail(string $email, ?string $exceptId = null): bool
     {
-        $result = $this->client->run(
-            'MATCH (s:School {email: $email})
-             WHERE s.id <> $exceptId
-             RETURN count(s) > 0 AS exists',
-            ['email' => $email, 'exceptId' => $exceptId ?? '']
-        );
+        $cypher = $exceptId
+            ? 'MATCH (sc:School {email: $email}) WHERE sc.id <> $id RETURN sc LIMIT 1'
+            : 'MATCH (sc:School {email: $email}) RETURN sc LIMIT 1';
 
-        return $result->first()->get('exists');
+        $params = ['email' => $email];
+        if ($exceptId) $params['id'] = $exceptId;
+
+        return !$this->client->run($cypher, $params)->isEmpty();
     }
+
+    /** @used-by \App\Services\ValidationService */
     public function existsByPhone(string $phone, ?string $exceptId = null): bool
     {
-        $result = $this->client->run(
-            'MATCH (s:School {phone: $phone})
-             WHERE s.id <> $exceptId
-             RETURN count(s) > 0 AS exists',
-            ['phone' => $phone, 'exceptId' => $exceptId ?? '']
-        );
+        $cypher = $exceptId
+            ? 'MATCH (sc:School {phone: $phone}) WHERE sc.id <> $id RETURN sc LIMIT 1'
+            : 'MATCH (sc:School {phone: $phone}) RETURN sc LIMIT 1';
 
-        return $result->first()->get('exists');
-    }
+        $params = ['phone' => $phone];
+        if ($exceptId) $params['id'] = $exceptId;
 
-    public static function toArray($node): array
-    {
-        return [
-            'id' => $node->getProperty('id'),
-            'name' => $node->getProperty('name') ?? null,
-            'address' => $node->getProperty('address') ?? null,
-            'phone' => $node->getProperty('phone') ?? null,
-            'email' => $node->getProperty('email') ?? null,
-            'website' => $node->getProperty('website') ?? null,
-
-        ];
+        return !$this->client->run($cypher, $params)->isEmpty();
     }
 }

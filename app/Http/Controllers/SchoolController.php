@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\IndexRequest;
 use App\Http\Requests\StoreSchoolRequest;
 use App\Http\Requests\UpdateSchoolRequest;
+use App\Http\Resources\PaginatedCollection;
 use App\Http\Resources\SchoolResource;
 use App\Services\SchoolService;
 
@@ -16,9 +17,12 @@ class SchoolController extends Controller
 
     public function index(IndexRequest $request)
     {
-        return SchoolResource::collection(
-            $this->service->all($request)
-        );
+        $data = $this->service->all($request->validated());
+
+        return (new PaginatedCollection(
+            SchoolResource::collection($data['data']),
+            $data['meta']
+        ));
     }
 
     public function show($id)

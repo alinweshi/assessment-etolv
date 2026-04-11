@@ -17,9 +17,9 @@ class SchoolResource extends BaseResource
             'phone' => $data['phone'] ?? null,
             'email' => $data['email'] ?? null,
             'website' => $data['website'] ?? null,
-            'created_at' => $data['created_at'] ?? null,
-            'updated_at' => $data['updated_at'] ?? null,
-            'deleted_at' => $data['deleted_at'] ?? null,
+            'created_at' => $this->formatDate($data['created_at'] ?? null),
+            'updated_at' => $this->formatDate($data['updated_at'] ?? null),
+            'deleted_at' => $this->formatDate($data['deleted_at'] ?? null),
             'students' => isset($this->students)
                 ? StudentResource::collection($this->students)
                 : [],

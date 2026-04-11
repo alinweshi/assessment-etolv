@@ -6,13 +6,13 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Laudis\Neo4j\Types\DateTime as Neo4jDateTime;
 use Carbon\Carbon;
 
-class StudentResource extends JsonResource
+class StudentResource extends BaseResource
 {
     public function toArray($request): array
     {
         // If the repository always uses self::toArray(), $this->resource is always an array
-        $studentData = $this->resource['student'] ?? $this->resource;
-
+        $data = $this->data();
+        $studentData = $data['student'];
         return [
             'id' => $studentData['id'] ?? null,
             'name' => $studentData['name'] ?? null,
@@ -29,17 +29,5 @@ class StudentResource extends JsonResource
             'created_at' => $this->formatDate($studentData['created_at'] ?? null),
             'updated_at' => $this->formatDate($studentData['updated_at'] ?? null),
         ];
-    }
-
-    private function formatDate(mixed $value): ?string
-    {
-        if (!$value) return null;
-
-        return match (true) {
-            $value instanceof Carbon => $value->toDateTimeString(),
-            $value instanceof Neo4jDateTime => Carbon::createFromTimestamp($value->getSeconds())->toDateTimeString(),
-            is_string($value) => Carbon::parse($value)->toDateTimeString(),
-            default => null,
-        };
     }
 }
