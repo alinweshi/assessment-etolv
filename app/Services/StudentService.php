@@ -19,15 +19,7 @@ class StudentService
     public function create(array $data)
     {
 
-        $result = $this->repo->create($data);
-
-
-        $studentId = $result['student']['id'];
-        $this->enrollInSchool($studentId, $data['school_id']);
-        // $this->registerSubject($studentId, $data['subject_ids']);
-
-
-        return $result;
+        return $this->repo->create($data);
     }
     public function update($id, array $data)
     {

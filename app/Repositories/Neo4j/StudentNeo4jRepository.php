@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Neo4j;
 
+use App\Exceptions\DuplicateFieldException;
 use App\Exceptions\RecordNotFoundException;
 use App\Exceptions\RegisteredStudentException;
 use App\Exceptions\StudentEnrolledException;
@@ -137,25 +138,36 @@ class StudentNeo4jRepository implements StudentRepositoryInterface
         ]);
     }
 
-    public function create(array $data)
+    public function create(array $data): array
     {
+        // ✅ Uniqueness checks BEFORE opening transaction
+        if ($this->existsByEmail($data['email'])) {
+            throw new DuplicateFieldException("Email {$data['email']} already exists.");
+        }
+
+        if ($this->existsByPhone($data['phone'])) {
+            throw new DuplicateFieldException("Phone {$data['phone']} already exists.");
+        }
+
         return $this->client->writeTransaction(
             static function (TransactionInterface $tsx) use ($data) {
+
                 $result = $tsx->run(
                     'MATCH (sc:School {id: $schoolId})
                  CREATE (st:Student {
-                    id: randomUUID(),
-                    name: $name,
-                    email: $email,
-                    phone: $phone,
-                    address: $address,
-                    age: $age,
-                    gender: $gender,
-                    created_at: datetime(),
-                    updated_at: datetime()
+                     id:         randomUUID(),
+                     name:       $name,
+                     email:      $email,
+                     phone:      $phone,
+                     address:    $address,
+                     age:        $age,
+                     gender:     $gender,
+                     created_at: datetime(),
+                     updated_at: datetime()
                  })
-                 
-                 RETURN st, sc', // Return both to satisfy the Resource structure
+                 CREATE (st)-[:BELONGS_TO]->(sc)   // ✅ relationship in same transaction
+                 WITH st, sc
+                 RETURN st, sc',
                     [
                         'schoolId' => $data['school_id'],
                         'name'     => $data['name'],
@@ -167,14 +179,27 @@ class StudentNeo4jRepository implements StudentRepositoryInterface
                     ]
                 );
 
+                // ✅ Empty means school not found — student was NOT created (transaction rolls back)
                 if ($result->isEmpty()) {
-                    throw new \App\Exceptions\RecordNotFoundException("School with ID {$data['school_id']} not found.");
+                    throw new RecordNotFoundException(
+                        "School with ID {$data['school_id']} not found."
+                    );
                 }
 
-                $record = $result->first();
+                // ✅ Register subjects in same transaction if provided
+                if (!empty($data['subject_ids'])) {
+                    $tsx->run(
+                        'MATCH (st:Student {id: $studentId})
+                     UNWIND $subjectIds AS subjectId
+                     MATCH (su:Subject {id: subjectId})
+                     MERGE (st)-[:TAKES]->(su)',
+                        [
+                            'studentId'  => $result->first()->get('st')->getProperty('id'),
+                            'subjectIds' => $data['subject_ids'],
+                        ]
+                    );
+                }
 
-                // Return in the exact shape the StudentResource expects
-                // In StudentNeo4jRepository.php
                 $record = $result->first();
 
                 return [
@@ -183,7 +208,7 @@ class StudentNeo4jRepository implements StudentRepositoryInterface
                         'id'   => $record->get('sc')->getProperty('id'),
                         'name' => $record->get('sc')->getProperty('name'),
                     ],
-                    'subjects' => []
+                    'subjects' => [],
                 ];
             }
         );
