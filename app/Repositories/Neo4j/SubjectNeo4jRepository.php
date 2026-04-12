@@ -7,43 +7,64 @@ use App\Exceptions\Neo4jConstraintException;
 use App\Exceptions\RecordNotFoundException;
 use App\Interfaces\SubjectRepositoryInterface;
 use App\Traits\HasMeta;
+use App\Traits\MapsNode;
 use Laudis\Neo4j\Contracts\ClientInterface;
 use Laudis\Neo4j\Contracts\TransactionInterface;
-use Laudis\Neo4j\Types\Node;
 
 class SubjectNeo4jRepository implements SubjectRepositoryInterface
 {
-    use HasMeta;
+    use HasMeta, MapsNode;
 
     public function __construct(protected ClientInterface $client) {}
 
-    // ✅ Typed Node, consistent with School and Student
-    public static function nodeToArray(Node $node): array
+
+    protected static function fields(): array
     {
-        return [
-            'id'   => $node->getProperty('id'),
-            'name' => $node->getProperty('name'),
-        ];
+        return ['id', 'name', 'created_at', 'updated_at'];
     }
 
     public function all(array $data): array
     {
-        $page  = max(1, (int) ($data['page']  ?? 1));
-        $limit = max(1, (int) ($data['limit'] ?? 10));
-        $skip  = ($page - 1) * $limit;
+        $page   = max(1, (int) ($data['page']  ?? 1));
+        $limit  = max(1, (int) ($data['limit'] ?? 10));
+        $skip   = ($page - 1) * $limit;
+        $params = ['skip' => $skip, 'limit' => $limit];
+        $where  = [];
 
-        // ✅ No more request() helper in the repository
+        // ─── Optional filters ─────────────────────────────────────
+        if (!empty($data['search'])) {
+            $where[]          = 'su.name CONTAINS $search';
+            $params['search'] = $data['search'];
+        }
+
+        $whereClause = count($where)
+            ? 'WHERE ' . implode(' AND ', $where)
+            : '';
+
+        // ─── Data query ───────────────────────────────────────────
         $result = $this->client->run(
-            'MATCH (su:Subject)
-             WITH su
-             ORDER BY su.name ASC
-             SKIP $skip LIMIT $limit
-             RETURN su',
-            ['skip' => $skip, 'limit' => $limit]
+            "MATCH (su:Subject)
+         $whereClause
+         WITH su
+         ORDER BY su.name ASC
+         SKIP \$skip LIMIT \$limit
+         RETURN su",
+            $params
         );
+        // dd($result
+        //     ->map(fn($row) => self::nodeToArray($row->get('su')))
+        //     ->toArray()); // Debugging line to inspect the raw result from Neo4j
+
+        // ─── Count query — mirrors same filters ───────────────────
+        $countParams = array_diff_key($params, array_flip(['skip', 'limit']));
 
         $total = $this->client
-            ->run('MATCH (su:Subject) RETURN count(su) AS total')
+            ->run(
+                "MATCH (su:Subject)
+             $whereClause
+             RETURN count(su) AS total",
+                $countParams
+            )
             ->first()
             ->get('total');
 
@@ -92,7 +113,6 @@ class SubjectNeo4jRepository implements SubjectRepositoryInterface
                 }
             );
         } catch (\Laudis\Neo4j\Exception\Neo4jException $e) {
-            // ✅ Constraint-based duplicate detection — no pre-checks needed
             if (Neo4jConstraintException::isConstraintViolation($e)) {
                 $field = Neo4jConstraintException::parseField($e, [
                     'name' => 'Name',
@@ -108,14 +128,12 @@ class SubjectNeo4jRepository implements SubjectRepositoryInterface
         try {
             return $this->client->writeTransaction(
                 static function (TransactionInterface $tsx) use ($id, $data) {
-                    // ✅ No find() pre-check — let the transaction handle not-found
                     $result = $tsx->run(
                         'MATCH (su:Subject {id: $id})
                          SET su += $props
                          RETURN su',
                         [
                             'id'    => $id,
-                            // ✅ SET su += $props instead of hardcoded SET su.name = $name
                             'props' => array_filter([
                                 'name' => $data['name'] ?? null,
                             ], fn($v) => $v !== null),
@@ -142,7 +160,6 @@ class SubjectNeo4jRepository implements SubjectRepositoryInterface
 
     public function delete($id): void
     {
-        // ✅ No find() pre-check — single transaction, count check inside
         $this->client->writeTransaction(
             static function (TransactionInterface $tsx) use ($id) {
                 $result = $tsx->run(

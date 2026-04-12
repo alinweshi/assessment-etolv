@@ -7,54 +7,64 @@ use App\Exceptions\Neo4jConstraintException;
 use App\Exceptions\RecordNotFoundException;
 use App\Interfaces\SchoolRepositoryInterface;
 use App\Traits\HasMeta;
+use App\Traits\MapsNode;
 use Laudis\Neo4j\Contracts\ClientInterface;
 use Laudis\Neo4j\Contracts\TransactionInterface;
-use Laudis\Neo4j\Types\Node;
 
 class SchoolNeo4jRepository implements SchoolRepositoryInterface
 {
-    use HasMeta;
+    use HasMeta, MapsNode;
 
     public function __construct(protected ClientInterface $client) {}
 
-    public static function nodeToArray(Node $node): array
+    protected static function fields(): array
     {
-        $props = $node->getProperties();
-
-        return [
-            'id'      => $props->get('id'),
-            'name'    => $props->get('name'),
-            'address' => $props->get('address') ?? null,
-            'phone'   => $props->get('phone') ?? null,
-            'email'   => $props->get('email') ?? null,
-            'website' => $props->get('website') ?? null,
-            'created_at' => $props->get('created_at'),
-            'updated_at' => $props->get('updated_at'),
-            'deleted_at' => null
-
-        ];
+        return ['id', 'name', 'address', 'phone', 'email', 'website', 'created_at', 'updated_at'];
     }
-
 
 
     public function all(array $data): array
     {
-        $page  = max(1, (int) ($data['page']  ?? 1));
-        $limit = max(1, (int) ($data['limit'] ?? 10));
-        $skip  = ($page - 1) * $limit;
+        $page   = max(1, (int) ($data['page']  ?? 1));
+        $limit  = max(1, (int) ($data['limit'] ?? 10));
+        $skip   = ($page - 1) * $limit;
+        $params = ['skip' => $skip, 'limit' => $limit];
+        $where  = ['sc.deleted_at IS NULL']; // ✅ always applied
 
+        // ─── Optional filters ─────────────────────────────────────
+        if (!empty($data['search'])) {
+            $where[]          = 'sc.name CONTAINS $search';
+            $params['search'] = $data['search'];
+        }
+
+        if (!empty($data['created_at'])) {
+            $where[]               = 'sc.created_at >= datetime($created_at)';
+            $params['created_at']  = $data['created_at'];
+        }
+
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+
+        // ─── Data query ───────────────────────────────────────────
         $result = $this->client->run(
-            'MATCH (sc:School)
-                WHERE sc.deleted_at IS NULL
-                WITH sc
-                ORDER BY sc.name ASC
-                SKIP $skip LIMIT $limit
-                RETURN sc',
-            ['skip' => $skip, 'limit' => $limit]
+            "MATCH (sc:School)
+         $whereClause
+         WITH sc
+         ORDER BY sc.name ASC
+         SKIP \$skip LIMIT \$limit
+         RETURN sc",
+            $params
         );
 
+        // ─── Count query — mirrors same filters ───────────────────
+        $countParams = array_diff_key($params, array_flip(['skip', 'limit']));
+
         $total = $this->client
-            ->run('MATCH (sc:School) WHERE sc.deleted_at IS NULL RETURN count(sc) AS total')
+            ->run(
+                "MATCH (sc:School)
+             $whereClause
+             RETURN count(sc) AS total",
+                $countParams
+            )
             ->first()
             ->get('total');
 

@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\IndexRequest;
 use App\Http\Requests\StoreSubjectRequest;
+use App\Http\Requests\SubjectIndexRequest;
 use App\Http\Requests\UpdateSubjectRequest;
+use App\Http\Resources\PaginatedCollection;
 use App\Http\Resources\SubjectResource;
 use App\Services\SubjectService;
 
@@ -14,10 +15,14 @@ class SubjectController extends Controller
         protected SubjectService $service
     ) {}
 
-    public function index(IndexRequest $request)
+    // ✅ Unpack data and meta separately
+    public function index(SubjectIndexRequest $request)
     {
-        return SubjectResource::collection(
-            $this->service->all($request)
+        $data = $this->service->all($request->validated());
+
+        return new PaginatedCollection(
+            SubjectResource::collection($data['data']), // ← the rows
+            $data['meta']                               // ← pagination info
         );
     }
 

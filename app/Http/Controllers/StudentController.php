@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\EnrollStudentRequest;
-use App\Http\Requests\IndexRequest;
 use App\Http\Requests\RegisterSubjectRequest;
 use App\Http\Requests\ReportRequest;
 use App\Http\Requests\StoreStudentRequest;
@@ -22,7 +21,7 @@ class StudentController extends Controller
     /**
      * Get all students
      */
-    public function index(IndexRequest $request)
+    public function index(StoreStudentRequest $request)
     {
         $data = $this->service->all($request->validated());
 

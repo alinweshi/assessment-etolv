@@ -9,13 +9,15 @@ use App\Exceptions\RegisteredStudentException;
 use App\Exceptions\StudentEnrolledException;
 use App\Interfaces\StudentRepositoryInterface;
 use App\Traits\HasMeta;
+use App\Traits\MapsNode;
 use Laudis\Neo4j\Contracts\ClientInterface;
 use Laudis\Neo4j\Contracts\TransactionInterface;
 use Laudis\Neo4j\Types\Node;
 
 class StudentNeo4jRepository implements StudentRepositoryInterface
 {
-    use HasMeta;
+    use HasMeta, MapsNode;
+
 
     public function __construct(
         protected ClientInterface          $client,
@@ -23,20 +25,10 @@ class StudentNeo4jRepository implements StudentRepositoryInterface
         protected SubjectNeo4jRepository  $subjectRepo
     ) {}
 
-    // ✅ Consistent with SchoolNeo4jRepository — public static, one method
-    public static function nodeToArray(Node $node): array
+
+    protected static function fields(): array
     {
-        return [
-            'id'         => $node->getProperty('id'),
-            'name'       => $node->getProperty('name'),
-            'email'      => $node->getProperty('email'),
-            'phone'      => $node->getProperty('phone'),
-            'address'    => $node->getProperty('address'),
-            'age'        => $node->getProperty('age'),
-            'gender'     => $node->getProperty('gender'),
-            'created_at' => $node->getProperty('created_at'),
-            'updated_at' => $node->getProperty('updated_at'),
-        ];
+        return ['id', 'name', 'email', 'phone', 'address', 'age', 'gender', 'created_at', 'updated_at'];
     }
 
     // Shapes a full student row (student + school + subjects)
@@ -52,11 +44,11 @@ class StudentNeo4jRepository implements StudentRepositoryInterface
         return [
             'student'  => self::nodeToArray($st),
             'school'   => $sc instanceof Node
-                ? SchoolNeo4jRepository::nodeToArray($sc) // ✅ reuse School mapper
+                ? SchoolNeo4jRepository::nodeToArray($sc)
                 : null,
             'subjects' => collect($subjects)
                 ->filter()
-                ->map(fn(Node $su) => SubjectNeo4jRepository::nodeToArray($su)) // ✅ reuse Subject mapper
+                ->map(fn(Node $su) => SubjectNeo4jRepository::nodeToArray($su))
                 ->toArray(),
         ];
     }
@@ -67,20 +59,54 @@ class StudentNeo4jRepository implements StudentRepositoryInterface
         $limit = max(1, (int) ($data['limit'] ?? 10));
         $skip  = ($page - 1) * $limit;
 
+        $params = ['skip' => $skip, 'limit' => $limit];
+        $where  = [];
+
+        // ✅ Build WHERE dynamically — same pattern as report()
+        if (!empty($data['created_at'])) {
+            $where[]               = 'st.created_at >= datetime($created_at)';
+            $params['created_at']  = $data['created_at'];
+        }
+
+        if (!empty($data['updated_at'])) {
+            $where[]               = 'st.updated_at >= datetime($updated_at)';
+            $params['updated_at']  = $data['updated_at'];
+        }
+
+        if (!empty($data['gender'])) {
+            $where[]          = 'st.gender = $gender';
+            $params['gender'] = $data['gender'];
+        }
+
+        // ✅ WHERE must come before WITH + collect() — not after
+        $whereClause = count($where)
+            ? 'WHERE ' . implode(' AND ', $where)
+            : '';
+
         $result = $this->client->run(
-            'MATCH (st:Student)
-             WITH st
-             ORDER BY coalesce(st.name, "") ASC
-             SKIP $skip LIMIT $limit
-             OPTIONAL MATCH (st)-[:BELONGS_TO]->(sc:School)
-             OPTIONAL MATCH (st)-[:TAKES]->(su:Subject)
-             WITH st, sc, collect(su) AS subjects
-             RETURN st, sc, subjects',
-            ['skip' => $skip, 'limit' => $limit]
+            "MATCH (st:Student)
+         $whereClause
+         WITH st
+         ORDER BY st.name ASC    -- ✅ no coalesce() — keeps index
+         SKIP \$skip LIMIT \$limit
+         OPTIONAL MATCH (st)-[:BELONGS_TO]->(sc:School)
+         OPTIONAL MATCH (st)-[:TAKES]->(su:Subject)
+         WITH st, sc, collect(su) AS subjects
+         RETURN st, sc, subjects",
+            $params
         );
 
+        // ✅ Count query mirrors same filters
+        $countQuery = "
+        MATCH (st:Student)
+        $whereClause
+        RETURN count(st) AS total
+    ";
+
+        $countParams = array_diff_key($params, array_flip(['skip', 'limit']));
+
         $total = $this->client
-            ->run('MATCH (st:Student) RETURN count(st) AS total')
+            ->run($countQuery, $countParams)
             ->first()
             ->get('total');
 

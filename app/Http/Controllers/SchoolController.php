@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\IndexRequest;
+use App\Http\Requests\SchoolIndexRequest;
 use App\Http\Requests\StoreSchoolRequest;
 use App\Http\Requests\UpdateSchoolRequest;
 use App\Http\Resources\PaginatedCollection;
@@ -15,7 +15,7 @@ class SchoolController extends Controller
         protected SchoolService $service
     ) {}
 
-    public function index(IndexRequest $request)
+    public function index(SchoolIndexRequest $request)
     {
         $data = $this->service->all($request->validated());
 
