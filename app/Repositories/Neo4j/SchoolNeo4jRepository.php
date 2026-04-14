@@ -128,6 +128,7 @@ class SchoolNeo4jRepository implements SchoolRepositoryInterface
                     'name'  => 'Name',
                     'email' => 'Email',
                     'phone' => 'Phone',
+                    'website' => 'Website',
                 ]);
                 throw new DuplicateFieldException("{$field} already exists.");
             }
@@ -171,6 +172,7 @@ class SchoolNeo4jRepository implements SchoolRepositoryInterface
                     'name'  => 'Name',
                     'email' => 'Email',
                     'phone' => 'Phone',
+                    'website' => 'Website',
                 ]);
                 throw new DuplicateFieldException("{$field} already exists.");
             }

@@ -214,6 +214,7 @@ class StudentNeo4jRepository implements StudentRepositoryInterface
                     'name'  => 'Name',
                     'email' => 'Email',
                     'phone' => 'Phone',
+
                 ]);
                 throw new DuplicateFieldException("{$field} already exists.");
             }

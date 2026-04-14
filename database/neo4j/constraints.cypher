@@ -5,6 +5,7 @@ CREATE CONSTRAINT school_id_unique    FOR (sc:School) REQUIRE sc.id    IS UNIQUE
 CREATE CONSTRAINT school_email_unique FOR (sc:School) REQUIRE sc.email IS UNIQUE;
 CREATE CONSTRAINT school_phone_unique FOR (sc:School) REQUIRE sc.phone IS UNIQUE;
 CREATE CONSTRAINT school_name_unique FOR (sc:School) REQUIRE sc.name IS UNIQUE;
+CREATE CONSTRAINT school_website_unique FOR (sc:School) REQUIRE sc.website IS UNIQUE;
 
 
 // ─── Student ──────────────────────────────────────────
